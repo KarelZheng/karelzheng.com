@@ -567,9 +567,22 @@
     @media (max-width: 400px) {
       .co-grid { grid-template-columns: 1fr; }
     }
+
+    /* ── Animated background ── */
+    #bgCanvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .wrap { position: relative; z-index: 2; pointer-events: auto; }
+    .toggle { z-index: 10; }
   </style>
 </head>
 <body>
+  <canvas id="bgCanvas"></canvas>
+
 
   <button class="toggle" id="toggle" aria-label="Toggle theme">
     <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
@@ -853,6 +866,114 @@
         });
       });
     })();
+  </script>
+
+
+  <script>
+  (function() {
+    var c = document.getElementById('bgCanvas');
+    var ctx = c.getContext('2d');
+    var dpr = window.devicePixelRatio || 1;
+    var particles = [];
+    var count = 90;
+    var maxDist = 150;
+    var mx = -9999, my = -9999;
+    var mouseRadius = 200;
+
+    document.addEventListener('mousemove', function(e) { mx = e.clientX; my = e.clientY; });
+    document.addEventListener('mouseleave', function() { mx = -9999; my = -9999; });
+
+    function resize() { c.width = window.innerWidth * dpr; c.height = window.innerHeight * dpr; ctx.scale(dpr, dpr); }
+    resize(); window.addEventListener('resize', resize);
+
+    var colors = ['129,140,248', '52,211,153', '167,139,250', '56,189,248'];
+    for (var i = 0; i < count; i++) {
+      particles.push({
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight,
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: (Math.random() - 0.5) * 0.4,
+        ox: 0, oy: 0,
+        r: Math.random() * 2 + 0.8,
+        color: colors[Math.floor(Math.random() * colors.length)]
+      });
+    }
+
+    function draw() {
+      var w = window.innerWidth, h = window.innerHeight;
+      ctx.clearRect(0, 0, w, h);
+
+      // Mouse glow
+      if (mx > 0) {
+        var mg = ctx.createRadialGradient(mx, my, 0, mx, my, mouseRadius);
+        mg.addColorStop(0, 'rgba(129,140,248,0.08)');
+        mg.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = mg;
+        ctx.fillRect(0, 0, w, h);
+      }
+
+      for (var i = 0; i < count; i++) {
+        var p = particles[i];
+
+        // Mouse attraction
+        if (mx > 0) {
+          var dmx = mx - p.x, dmy = my - p.y;
+          var md = Math.sqrt(dmx*dmx + dmy*dmy);
+          if (md < mouseRadius) {
+            var force = (1 - md/mouseRadius) * 1.5;
+            p.ox += (dmx/md) * force;
+            p.oy += (dmy/md) * force;
+          }
+        }
+        p.ox *= 0.92; p.oy *= 0.92;
+
+        p.x += p.vx + p.ox; p.y += p.vy + p.oy;
+        if (p.x < 0) p.x = w; if (p.x > w) p.x = 0;
+        if (p.y < 0) p.y = h; if (p.y > h) p.y = 0;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(' + p.color + ',0.7)';
+        ctx.fill();
+
+        var glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 8);
+        glow.addColorStop(0, 'rgba(' + p.color + ',0.08)');
+        glow.addColorStop(1, 'rgba(' + p.color + ',0)');
+        ctx.fillStyle = glow;
+        ctx.fillRect(p.x - p.r*8, p.y - p.r*8, p.r*16, p.r*16);
+
+        // Lines to mouse
+        if (mx > 0) {
+          var dml = Math.sqrt((mx-p.x)*(mx-p.x) + (my-p.y)*(my-p.y));
+          if (dml < mouseRadius) {
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(mx, my);
+            ctx.strokeStyle = 'rgba(129,140,248,' + (0.15 * (1 - dml/mouseRadius)) + ')';
+            ctx.lineWidth = 0.6;
+            ctx.stroke();
+          }
+        }
+
+        for (var j = i + 1; j < count; j++) {
+          var q = particles[j];
+          var dx = p.x - q.x, dy = p.y - q.y;
+          var dist = Math.sqrt(dx*dx + dy*dy);
+          if (dist < maxDist) {
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(q.x, q.y);
+            ctx.strokeStyle = 'rgba(129,140,248,' + (0.2 * (1 - dist/maxDist)) + ')';
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+          }
+        }
+      }
+      requestAnimationFrame(draw);
+    }
+    draw();
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) c.style.display = 'none';
+  })();
   </script>
 
 </body>
