@@ -85,6 +85,24 @@ def parse_levels(v):
 HIST = union  # historic-ness heuristic uses distance to centre
 CENTRE = np.array(tr.transform(14.4205, 50.0870)) - np.array([X0, Y0])
 
+from PIL import ImageColor
+import colorsys
+def css_hex(v, max_sat=0.45, lmin=0.30, lmax=0.93, mix=None, mixw=0.5):
+    """CSS colour name or hex -> '#rrggbb' with saturation/lightness clamped to plausible paint, else None."""
+    if not v:
+        return None
+    try:
+        r, g, b = ImageColor.getrgb(v)[:3]
+    except Exception:
+        return None
+    h, l, sat = colorsys.rgb_to_hls(r / 255, g / 255, b / 255)
+    sat = min(sat, max_sat); l = max(lmin, min(lmax, l))
+    r, g, b = colorsys.hls_to_rgb(h, l, sat)
+    if mix:   # blend toward the category default so tagged colours stay in the palette family
+        mr, mg, mb = ImageColor.getrgb(mix)
+        r, g, b = (r * 255 * (1 - mixw) + mr * mixw) / 255, (g * 255 * (1 - mixw) + mg * mixw) / 255, (b * 255 * (1 - mixw) + mb * mixw) / 255
+    return "#%02x%02x%02x" % (int(r * 255), int(g * 255), int(b * 255))
+
 def building_record(bid, poly, t, h_est, base, is_part):
     """Return dict with geometry + style decisions, or None."""
     btype = t.get("building", t.get("building:part", "yes"))
@@ -136,26 +154,45 @@ def building_record(bid, poly, t, h_est, base, is_part):
         roof = "pointed"
     if rs in ("onion",):
         roof = "dome"
-    # roof colour family
-    rc = (t.get("roof:colour") or t.get("roof:material") or "").lower()
-    if btype in ("church", "cathedral", "chapel") or rc in ("copper", "green", "#008000"):
-        roofc = "copper" if btype in ("church", "cathedral", "chapel") and area > 400 else ("copper" if rc in ("copper", "green") else "red")
+    # roof colour family: explicit tag wins, then material, then type heuristics
+    rc = (t.get("roof:colour") or "").lower().strip()
+    rm = (t.get("roof:material") or "").lower().strip()
+    roofc = None
+    hexc = None
+    if rc:
+        try:
+            _r, _g, _b = ImageColor.getrgb(rc)[:3]; _h, _l, _s = colorsys.rgb_to_hls(_r / 255, _g / 255, _b / 255)
+            reddish = _s > 0.25 and (_h < 0.12 or _h > 0.93)
+            hexc = css_hex(rc, max_sat=0.62, lmin=0.25, lmax=0.85, mix="#bf5636" if reddish else "#8e8d88", mixw=0.5)
+        except Exception:
+            hexc = None
+    if hexc:
+        roofc = hexc
+    elif rm == "copper" or rc == "copper" or (btype in ("church", "cathedral", "chapel") and area > 400):
+        roofc = "copper"
+    elif rm in ("metal", "concrete", "tar_paper", "gravel", "slate", "zinc", "eternit") or rc in ("slate", "grey", "gray", "black", "metal", "darkgray", "darkgrey", "dimgray", "dimgrey", "lightgray", "lightgrey", "silver", "zinc", "tin", "lead"):
+        roofc = "grey" if roof == "flat" else "slate"
+    elif rm == "glass":
+        roofc = "glass"
+    elif rm == "roof_tiles" or rc in ("red", "firebrick", "brown", "orange", "maroon", "darkred", "indianred", "sienna"):
+        roofc = "red"
     elif roof == "flat":
         roofc = "grey"
-    elif rc in ("slate", "grey", "gray", "black", "metal", "#808080", "darkgray", "darkgrey", "dimgray", "dimgrey", "lightgray", "lightgrey", "silver", "zinc", "tin", "lead"):
-        roofc = "slate"
     else:
         roofc = "red"
-    # facade colour index: deterministic per building
+    # facade colour: explicit tag, else deterministic palette index per building
     hsh = int(hashlib.md5(str(bid).encode()).hexdigest()[:6], 16)
-    if btype in ("church", "cathedral", "chapel", "monastery"):
+    fc_hex = css_hex((t.get("building:colour") or "").lower().strip(), mix="#eadbbd", mixw=0.4)
+    if fc_hex:
+        fc = fc_hex
+    elif btype in ("church", "cathedral", "chapel", "monastery"):
         fc = 7
     elif btype in ("industrial", "warehouse", "garage", "garages", "hangar"):
         fc = 8 + hsh % 2
     elif roof == "flat" and h > 25:
         fc = 10 + hsh % 3     # panel / modern
     else:
-        fc = hsh % 7
+        fc = [0, 1, 2, 3, 4, 5, 6, 13, 14, 15, 16, 17][hsh % 12]
     # roof ridge inset ring for pitched roofs
     inset = None
     if roof == "pitched" and area > 25:
@@ -395,7 +432,7 @@ for cy in range(ny):
             if ps.is_empty or ps.geom_type != "Polygon":
                 ps = p
             rings = [flat2(ps.exterior.coords[:-1], ox, oy)] + [flat2(i.coords[:-1], ox, oy) for i in ps.interiors if i.length > 8]
-            rec_out = [rings, int(round(rec["h"] * 10)), int(round(rec["base"] * 10)), {"pitched": "p", "flat": "f", "dome": "d", "pointed": "o"}[rec["roof"]], rec["roofc"][0], rec["fc"], int(round(rec["minh"] * 10)), int(round(min(rec["rh"], 60) * 10))]
+            rec_out = [rings, int(round(rec["h"] * 10)), int(round(rec["base"] * 10)), {"pitched": "p", "flat": "f", "dome": "d", "pointed": "o"}[rec["roof"]], (rec["roofc"] if rec["roofc"].startswith("#") else rec["roofc"][0]), rec["fc"], int(round(rec["minh"] * 10)), int(round(min(rec["rh"], 60) * 10))]
             if rec["inset"]:
                 rec_out.append(flat2(rec["inset"][0][:-1], ox, oy)); rec_out.append(int(round(rec["inset"][1] * 10)))
             ch["b"].append(rec_out)

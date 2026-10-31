@@ -29,3 +29,17 @@ for n,(l,ln) in best.items():
 labels.sort(key=lambda p:(p[3],p[0]))
 json.dump(labels,open(os.path.join(OUT,"labels.json"),"w"),separators=(",",":"),ensure_ascii=False)
 print("labels",len(labels),"ref",len(ref))
+
+# district outline + Vltava for the minimap
+from shapely.geometry import shape as _shape
+from shapely.ops import unary_union as _uu
+import shapely
+D=json.load(open(os.path.join(ROOT,"data","raw","districts_geo.json")))
+def _proj(g): return shapely.transform(g, lambda a: __import__("numpy").column_stack(tr.transform(a[:,0],a[:,1]))-__import__("numpy").array([X0,Y0]))
+out={"districts":{},"union":None}
+for k,v in D["districts"].items():
+    g=_proj(_shape(v)).simplify(25); g=g if g.geom_type=="Polygon" else max(g.geoms,key=lambda a:a.area); out["districts"][k]=[[round(x),round(y)] for x,y in g.exterior.coords]
+u=_proj(_shape(D["union"])).simplify(25); u=u if u.geom_type=="Polygon" else max(u.geoms,key=lambda a:a.area); out["union"]=[[round(x),round(y)] for x,y in u.exterior.coords]
+w=_uu([p for _,p,c,t in L["lands"] if c=="water" and p.area>20000]).simplify(20)
+out["water"]=[[[round(x),round(y)] for x,y in g.exterior.coords] for g in (w.geoms if w.geom_type=="MultiPolygon" else [w]) if g.area>20000]
+json.dump(out,open(os.path.join(OUT,"outline.json"),"w"),separators=(",",":")); print("outline written")

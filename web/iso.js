@@ -13,7 +13,7 @@ const PAL = {
   farmland: ['#d9c48a', '#c9b376'], grass: ['#9cc46f', '#8fb862'], scrub: ['#8fb46a', '#7fa45c'],
   vineyard: ['#9dc06a', '#6f9448'], cemetery: ['#a3c080', '#95b374'], pitch: ['#86c26a', '#7ab45e'],
   forest: ['#5f9148', '#4f7d3b'], plaza: ['#d3c7ae', '#c8bba0'], railyard: ['#b7ad9a', '#a89e8b'], rock: ['#bdb2a0', '#a89d8b'],
-  water: ['#5b9cc9', '#6aa9d3', '#4a8ab7'],
+  water: ['#5a93b4', '#6fa7c5', '#4a7e9c'],
   road: { 1: ['#7d7d7f', '#f1d87a'], 2: ['#858587', '#f1d87a'], 3: ['#8a8a8c', '#f3eedb'], 4: ['#90908f', '#f3eedb'], 5: ['#979795', '#f3eedb'], 6: ['#a19f9b', null], 7: ['#c9bea6', null], 8: ['#aaa8a3', null], 9: ['#b9a78a', null], 10: ['#c6b995', null], 11: ['#c0b391', null],
     20: ['#6e665e', '#9d948a'], 21: ['#8d8782', '#5a534d'], 22: ['#6e665e', '#9d948a'], 30: ['#5b9cc9', null], 31: ['#6aa9d3', null] },
   bridge: '#8a8580', bridgeEdge: '#5e5a56',
@@ -22,8 +22,11 @@ const PAL = {
     ['#dfe3c4', '#c3c9a3', '#808a63'], ['#d8e1e6', '#bac7cf', '#7a8b96'], ['#f6efdf', '#dad2bf', '#98917f'],
     ['#e6cfa6', '#cbb084', '#8c7452'], ['#efe6d2', '#d2c7b0', '#8e836a'] /* church */,
     ['#c9c3b8', '#aea89d', '#6f6a62'], ['#b9b5ad', '#9e9a92', '#605c56'] /* industrial */,
-    ['#d6d3cc', '#b9b6af', '#74716a'], ['#dcd1c0', '#bfb4a2', '#7a7062'], ['#c8d0d4', '#a8b1b6', '#6a7378'] /* modern */ ],
-  roof: { r: ['#c2583a', '#d5704f', '#8a3a24'], s: ['#6f7378', '#868a90', '#44474b'], c: ['#5f9a86', '#79b29d', '#3c6b5c'], g: ['#9c9a94', '#aaa8a1', '#66645f'] },
+    ['#d6d3cc', '#b9b6af', '#74716a'], ['#dcd1c0', '#bfb4a2', '#7a7062'], ['#c8d0d4', '#a8b1b6', '#6a7378'] /* modern */,
+    ['#f4e6b4', '#d8c88f', '#97875a'] /* yellow */, ['#f2d2c4', '#d6b4a4', '#977466'] /* salmon */, ['#dde6d3', '#bfcab2', '#7d8a70'] /* mint */,
+    ['#efe1cf', '#d1c1ab', '#8f806a'] /* beige */, ['#f7f1e6', '#dcd4c6', '#9a9284'] /* white */ ],
+  roof: { r: ['#c2583a', '#d5704f', '#8a3a24'], s: ['#6f7378', '#868a90', '#44474b'], c: ['#5f9a86', '#79b29d', '#3c6b5c'], g: ['#9c9a94', '#aaa8a1', '#66645f'], l: ['#9fb9c4', '#c0d6de', '#5f7c88'] },
+  roofRed: [['#c2583a', '#d5704f', '#8a3a24'], ['#b34f30', '#c86744', '#7d3520'], ['#cf6948', '#e08361', '#95452b'], ['#a9492d', '#bf5f3f', '#73301d'], ['#c65f3e', '#d87a57', '#8c3f26']],
   tree: ['#3f7a35', '#5d9a47', '#2c5a26', '#5a3d26'], shrub: ['#6d9c4a', '#86b35e'],
   label: '#2b2a28', labelHalo: 'rgba(240,232,214,0.9)'
 };
@@ -37,14 +40,20 @@ function shade(hex, f) { const [r, g, b] = hexToRgb(hex); const c = v => Math.ma
 const PALETTE = new Set();
 function reg(c) { if (c && c[0] === '#') PALETTE.add(c); return c; }
 (function collect(o) { for (const k in o) { const v = o[k]; if (typeof v === 'string') reg(v); else if (typeof v === 'object') collect(v); } })(PAL);
-for (const f of PAL.facade) { reg(shade(f[0], 0.9)); reg(shade(f[1], 0.9)); }
+for (const f of PAL.facade) { reg(shade(f[0], 0.9)); reg(shade(f[1], 0.9)); reg(shade(f[0], 0.62)); reg(shade(f[1], 0.62)); }
 for (const k in PAL.roof) { reg(shade(PAL.roof[k][0], 0.85)); }
+for (const r of PAL.roofRed) { for (const c of r) reg(c); reg(shade(r[0], 0.85)); }
 for (const c of [...PALETTE]) { for (const f of [0.4, 0.42, 0.45, 0.5, 0.6]) reg(shade(c, f)); }
 for (const c of ['#1f3d5a', '#17304a', '#141a22', '#f6d77a', '#5a5040', '#213f1f', '#2d4f29', '#162a16', '#2a1d12', '#3a3734', '#2e2b28']) reg(c);
-for (const c of [...PALETTE]) reg(shade(c, 0.32));
-const palRgb = [...PALETTE].map(hexToRgb);
-const palInt = palRgb.map(([r, g, b]) => (r << 16) | (g << 8) | b);
+for (const c of [...PALETTE]) { reg(shade(c, 0.32)); reg(shade(c, 0.72)); reg(shade(c, 0.8)); reg(shade(shade(c, 0.88), 0.72)); reg(shade(shade(c, 1.07), 0.72)); }
+let palRgb = [...PALETTE].map(hexToRgb);
+let palInt = palRgb.map(([r, g, b]) => (r << 16) | (g << 8) | b);
 const snapCache = new Map();
+function regDynamic(c) { // colour from data: add to the snap palette (plus the shades the renderer derives)
+  if (!c || PALETTE.has(c)) return;
+  for (const f of [1, 0.9, 0.85, 0.62, 0.5, 0.42, 0.4, 0.32]) { const v = f === 1 ? c : shade(c, f); if (!PALETTE.has(v)) { PALETTE.add(v); const rgb = hexToRgb(v); palRgb.push(rgb); palInt.push((rgb[0] << 16) | (rgb[1] << 8) | rgb[2]); } }
+  snapCache.clear();
+}
 function snapNearest(rgbInt) {
   let v = snapCache.get(rgbInt); if (v !== undefined) return v;
   const r = rgbInt >> 16, g = (rgbInt >> 8) & 255, b = rgbInt & 255; let best = 0, bd = 1e9;
@@ -126,10 +135,20 @@ function hash2(x, y) { let h = (x * 374761393 + y * 668265263) | 0; h = (h ^ (h 
 // ---------------------------------------------------------------- item building (per chunk, per LOD)
 // LOD: 0 => S=4 (cells 4m), 1 => S=2 (4m), 2 => S=1 (8m), 3 => S=0.5 (16m), 4 => S=0.25 (32m), 5 => S=0.125 (64m)
 function cellSizeForLod(lod) { return [4, 4, 8, 16, 32, 64][lod]; }
+function chunkShadows(ch) {
+  if (ch.shadows) return ch.shadows;
+  const out = []; const { ox, oy, raw } = ch;
+  for (const b of raw.b) {
+    const h = b[1] / 10, minh = (b[6] || 0) / 10; if (h - minh <= 2.5) continue;
+    const r = b[0][0]; const ring = []; for (let k = 0; k < r.length; k += 2) ring.push([ox + r[k] / 4, oy + r[k + 1] / 4]);
+    const L = Math.min(55, (h - minh) * 0.75); out.push({ ring, sx: 0.92 * L, sy: -0.39 * L });
+  }
+  ch.shadows = out; return out;
+}
 function buildItems(ch, lod) {
   if (ch.items[lod]) return ch.items[lod];
   const items = []; const { ox, oy, zm, lc, raw } = ch; const NV = CHUNK / ZSTEP + 1; const NC = CHUNK / LCRES;
-  const cs = cellSizeForLod(lod); const n = CHUNK / cs; const step = cs / LCRES;
+  const cs = cellSizeForLod(lod); const n = CHUNK / cs; const step = cs / LCRES; const shadows = [];
   // --- terrain cells
   for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
     // majority class over the covered lc cells (cheap: sample centre + corners)
@@ -142,7 +161,7 @@ function buildItems(ch, lod) {
     const za = ch.zAt(x0, y0), zb = ch.zAt(x0 + cs, y0), zc = ch.zAt(x0 + cs, y0 + cs), zd = ch.zAt(x0, y0 + cs);
     let z1 = za, z2 = zb, z3 = zc, z4 = zd; if (cls === 13) { const m = Math.min(za, zb, zc, zd); z1 = z2 = z3 = z4 = m; }
     // light from the NW/top: slope facing south-east is darker
-    const slope = ((zc + zb) - (za + zd)) / (2 * cs) * 0.6 + ((zc + zd) - (za + zb)) / (2 * cs) * -0.9;
+    const slope = cls === 13 ? 0 : ((zc + zb) - (za + zd)) / (2 * cs) * 0.6 + ((zc + zd) - (za + zb)) / (2 * cs) * -0.9;
     items.push({ t: 0, k: (x0 + cs + ox) - (y0 + oy), bx0: ox + x0, bx1: ox + x0 + cs, by0: oy + y0, by1: oy + y0 + cs, zlo: Math.min(z1, z2, z3, z4), zhi: Math.max(z1, z2, z3, z4), cls, pts: [[ox + x0, oy + y0, z1], [ox + x0 + cs, oy + y0, z2], [ox + x0 + cs, oy + y0 + cs, z3], [ox + x0, oy + y0 + cs, z4]], sh: slope, i, j, cs });
   }
   // --- water polygons (strip split)
@@ -189,12 +208,16 @@ function buildItems(ch, lod) {
     const pieces = (lod <= 2) ? splitStrips(rr, 16) : [rr];
     const insPieces = ins && pieces.length > 1 ? splitStrips([ins], 16) : (ins ? [[ins]] : null);
     const [cxm, cym] = polyCentroid(rr[0]);
+    const seed0 = hash2(rings[0][0] + ch.cx * 7, rings[0][1] + ch.cy * 13);
+    // resolve colours once per building
+    let fac; if (typeof fc === 'string') { regDynamic(fc); const dark = shade(fc, 0.86); fac = [fc, dark, shade(fc, 0.62)]; } else fac = PAL.facade[fc] || PAL.facade[0];
+    let rc; if (typeof roofc === 'string' && roofc[0] === '#') { regDynamic(roofc); rc = [roofc, shade(roofc, 1.12), shade(roofc, 0.7)]; regDynamic(shade(roofc, 1.12)); regDynamic(shade(roofc, 0.7)); } else if (roofc === 'r') rc = PAL.roofRed[(seed0 * 97) % 5 | 0]; else rc = PAL.roof[roofc] || PAL.roof.g;
     for (let pi = 0; pi < pieces.length; pi++) {
       const s = pieces[pi];
       let bx0 = 1e9, bx1 = -1e9, by0 = 1e9, by1 = -1e9, k = -1e9; for (const p of s[0]) { bx0 = Math.min(bx0, p[0]); bx1 = Math.max(bx1, p[0]); by0 = Math.min(by0, p[1]); by1 = Math.max(by1, p[1]); k = Math.max(k, p[0] - p[1]); }
       // find inset piece overlapping this strip's depth range
       let insP = null; if (insPieces) { const dmid = (bx0 - by1 + bx1 - by0) / 2; for (const ip of insPieces) { let a = 1e9, bb = -1e9; for (const p of ip[0]) { const d = p[0] - p[1]; a = Math.min(a, d); bb = Math.max(bb, d); } if (pieces.length === 1 || (bb >= k - 16.5 && a <= k + 0.5)) { insP = ip[0]; break; } } }
-      items.push({ t: 3, k: k + 0.5, bx0, bx1, by0, by1, zlo: base + minh, zhi: base + h + Math.max(insetR + 6, rh + 2), rings: s, h, base, minh, roof, roofc, fc, ins: insP, insetR, rh, cx: cxm, cy: cym, area: Math.abs(ringArea(rr[0])), seed: hash2(rings[0][0], rings[0][1]) });
+      items.push({ t: 3, k: k + 0.5, bx0, bx1, by0, by1, zlo: base + minh, zhi: base + h + Math.max(insetR + 6, rh + 2), rings: s, h, base, minh, roof, fac, rc, ins: insP, insetR, rh, cx: cxm, cy: cym, area: Math.abs(ringArea(rr[0])), seed: seed0 });
     }
   }
   // --- trees: mapped + synthetic in forest/scrub/grass
@@ -208,6 +231,25 @@ function buildItems(ch, lod) {
       items.push({ t: 4, k: x - y + 0.3, bx0: x - 4, bx1: x + 4, by0: y - 4, by1: y + 4, zlo: z, zhi: z + 10, x, y, z, big: c === 9 ? 1 : (c === 5 ? 0 : 1), sz: 0.7 + 0.7 * hash2(i * 31 + 7, j * 17 + 3) });
     }
   }
+  // --- shadow mask (4 m cells): this chunk's buildings plus the neighbours on the light side
+  if (lod <= 2) {
+    const mc = document.createElement('canvas'); mc.width = NC; mc.height = NC; const m = mc.getContext('2d', { willReadFrequently: true });
+    m.fillStyle = '#000';
+    const paint = (list, dx, dy) => { for (const sh of list) { const r = sh.ring; const n = r.length; m.beginPath(); for (let i = 0; i < n; i++) { const P = r[i], Q = r[(i + 1) % n]; m.moveTo((P[0] + dx) / LCRES, (P[1] + dy) / LCRES); m.lineTo((Q[0] + dx) / LCRES, (Q[1] + dy) / LCRES); m.lineTo((Q[0] + dx + sh.sx) / LCRES, (Q[1] + dy + sh.sy) / LCRES); m.lineTo((P[0] + dx + sh.sx) / LCRES, (P[1] + dy + sh.sy) / LCRES); m.closePath(); } m.fill(); } };
+    paint(chunkShadows(ch), -ox, -oy);
+    for (const [ncx, ncy] of [[ch.cx - 1, ch.cy], [ch.cx - 1, ch.cy + 1], [ch.cx, ch.cy + 1], [ch.cx - 1, ch.cy - 1], [ch.cx, ch.cy - 1]]) {
+      const nb = CHUNKS.get(chunkKey(ncx, ncy)); if (!nb) continue; paint(chunkShadows(nb), -ox, -oy);
+    }
+    const d = m.getImageData(0, 0, NC, NC).data; const mask = new Uint8Array(NC * NC); for (let i = 0; i < NC * NC; i++) mask[i] = d[i * 4 + 3] > 100 ? 1 : 0;
+    ch.shadowMask = mask;   // row = y index from south (world y), col = x
+    for (const it of items) {
+      if (it.t === 0) { // fraction of 4 m cells in shadow -> shade level
+        let cnt = 0, tot = 0; for (let b = 0; b < step; b++) for (let a = 0; a < step; a++) { const yy = it.j * step + b, xx = it.i * step + a; if (yy < NC && xx < NC) { tot++; cnt += mask[yy * NC + xx]; } }
+        it.shadow = tot ? cnt / tot : 0;
+      } else if (it.t === 2 && !it.bridge) { const mx = ((it.P[0] + it.Q[0]) / 2 - ox) / LCRES | 0, my = ((it.P[1] + it.Q[1]) / 2 - oy) / LCRES | 0; it.shadow = (mx >= 0 && my >= 0 && mx < NC && my < NC && mask[my * NC + mx]) ? 1 : 0; }
+      else if (it.t === 4) { const mx = (it.x - ox) / LCRES | 0, my = (it.y - oy) / LCRES | 0; it.shadow = (mx >= 0 && my >= 0 && mx < NC && my < NC && mask[my * NC + mx]) ? 1 : 0; }
+    }
+  }
   items.sort((a, b) => a.k - b.k || a.t - b.t);
   ch.items[lod] = items; return items;
 }
@@ -217,13 +259,14 @@ function drawItems(ctx, items, S, offx, offy, lod, night) {
   const px = (x, y, z) => Math.round((x + y) * S - offx) + 0.0;
   const py = (x, y, z) => Math.round(((x - y) / 2 - z * ZF) * S - offy) + 0.0;
   function poly(pts, fill, stroke) { ctx.beginPath(); for (let i = 0; i < pts.length; i++) { const p = pts[i]; const X = px(p[0], p[1], p[2]), Y = py(p[0], p[1], p[2]); if (i) ctx.lineTo(X, Y); else ctx.moveTo(X, Y); } ctx.closePath(); if (fill) { ctx.fillStyle = fill; ctx.fill(); } if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke(); } }
-  function polyRings(rings, fill, stroke) { ctx.beginPath(); for (const r of rings) { for (let i = 0; i < r.length; i++) { const p = r[i]; const X = px(p[0], p[1], p[2]), Y = py(p[0], p[1], p[2]); if (i) ctx.lineTo(X, Y); else ctx.moveTo(X, Y); } ctx.closePath(); } if (fill) { ctx.fillStyle = fill; ctx.fill('evenodd'); } if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke(); } }
+  function polyRings(rings, fill, stroke) { ctx.beginPath(); for (const r of rings) { for (let i = 0; i < r.length; i++) { const p = r[i]; const X = px(p[0], p[1], p[2]), Y = py(p[0], p[1], p[2]); if (i) ctx.lineTo(X, Y); else ctx.moveTo(X, Y); } ctx.closePath(); } if (fill) { ctx.fillStyle = fill; ctx.fill('evenodd'); } if (stroke) { ctx.strokeStyle = stroke; ctx.stroke(); } }
   const hi = lod <= 1, mid = lod <= 2;
   for (const it of items) {
     if (it.t === 0) { // terrain cell
       const name = LC_NAMES[it.cls]; const cols = PAL[name] || PAL.ground;
       let col = cols[(name === 'plaza' && hash2(it.i * 5 + 1, it.j * 3 + 7) < 0.18) ? 1 : 0];
       if (it.sh > 0.08) col = shade(col, 0.88); else if (it.sh < -0.08) col = shade(col, 1.07);
+      if (it.shadow >= 0.5 && !night) col = shade(col, 0.72);
       if (night) col = shade(col, 0.32);
       poly(it.pts, col, col);
       if (hi && !night) { // textures
@@ -235,12 +278,12 @@ function drawItems(ctx, items, S, offx, offy, lod, night) {
         else if (it.cls === 12 && r < 0.3) { ctx.fillStyle = cols[1]; ctx.fillRect(X - 1, Y, 2, 1); }
       }
     } else if (it.t === 1) { // water polygon
-      polyRings(it.rings, night ? '#17304a' : PAL.water[0], night ? '#17304a' : PAL.water[0]);
+      ctx.lineWidth = 2; polyRings(it.rings, night ? '#17304a' : PAL.water[0], night ? '#17304a' : PAL.water[0]); ctx.lineWidth = 1;
       if (hi && !night) { // crisp bank edge
-        ctx.save(); ctx.strokeStyle = PAL.water[2]; ctx.lineWidth = 1; ctx.beginPath(); const r = it.rings[0]; for (let i = 0; i < r.length; i++) { const p = r[i]; const X = px(p[0], p[1], p[2]), Y = py(p[0], p[1], p[2]); if (i) ctx.lineTo(X, Y); else ctx.moveTo(X, Y); } ctx.closePath(); ctx.stroke(); ctx.restore();
+        ctx.save(); ctx.strokeStyle = PAL.water[2]; ctx.lineWidth = 1; ctx.beginPath(); const r = it.rings[0]; const n = r.length; for (let i = 0; i < n; i++) { const p = r[i], q = r[(i + 1) % n]; if (Math.abs((p[0] - p[1]) - (q[0] - q[1])) < 0.05) continue; /* strip cut line, not a bank */ ctx.moveTo(px(p[0], p[1], p[2]), py(p[0], p[1], p[2])); ctx.lineTo(px(q[0], q[1], q[2]), py(q[0], q[1], q[2])); } ctx.stroke(); ctx.restore();
       }
     } else if (it.t === 2) { // road segment
-      const spec = PAL.road[it.cls]; let col = spec[0]; if (it.bridge) col = PAL.bridge; if (night) col = shade(col, 0.5);
+      const spec = PAL.road[it.cls]; let col = spec[0]; if (it.bridge) col = PAL.bridge; if (it.shadow && !night) col = shade(col, 0.72); if (night) col = shade(col, 0.5);
       poly(it.quad, col, it.bridge ? PAL.bridgeEdge : null);
       if (mid) { // round joints
         const d = it.w * S / 2; const X = px(it.P[0], it.P[1], it.P[2]), Y = py(it.P[0], it.P[1], it.P[2]);
@@ -255,7 +298,7 @@ function drawItems(ctx, items, S, offx, offy, lod, night) {
         ctx.beginPath(); ctx.moveTo(px((q[0][0] + q[3][0] * 3) / 4, (q[0][1] + q[3][1] * 3) / 4, q[0][2]), py((q[0][0] + q[3][0] * 3) / 4, (q[0][1] + q[3][1] * 3) / 4, q[0][2])); ctx.lineTo(px((q[1][0] + q[2][0] * 3) / 4, (q[1][1] + q[2][1] * 3) / 4, q[1][2]), py((q[1][0] + q[2][0] * 3) / 4, (q[1][1] + q[2][1] * 3) / 4, q[1][2])); ctx.stroke(); ctx.setLineDash([]);
       }
     } else if (it.t === 3) { // building
-      const fac = PAL.facade[it.fc]; const zb = it.base + it.minh, zt = it.base + it.h; const outer = it.rings[0];
+      const fac = it.fac; const zb = it.base + it.minh, zt = it.base + it.h; const outer = it.rings[0];
       // walls (visible edges: outward normal . (1,-1) > 0 ; ring is CCW so outward normal of edge P->Q is (dy, -dx))
       for (const ring of it.rings) {
         const n = ring.length;
@@ -266,7 +309,7 @@ function drawItems(ctx, items, S, offx, offy, lod, night) {
           let col = south > 0.5 ? fac[0] : fac[1]; if (night) col = shade(col, 0.42);
           poly([[P[0], P[1], zb], [Q[0], Q[1], zb], [Q[0], Q[1], zt], [P[0], P[1], zt]], col, mid ? (night ? shade(fac[2], 0.5) : fac[2]) : null);
           // windows
-          if (hi && L > 2.5 && it.h > 4 && it.fc !== 8 && it.fc !== 9) {
+          if (hi && L > 2.5 && it.h > 4 && fac !== PAL.facade[8] && fac !== PAL.facade[9]) {
             const floors = Math.floor((it.h - 1.0) / 3.2); const cols = Math.floor(L / 3.0);
             if (floors > 0 && cols > 0) {
               ctx.fillStyle = night ? (hash2(P[0] | 0, zt | 0) < 0.6 ? '#f6d77a' : '#5a5040') : shade(col, 0.62);
@@ -279,7 +322,7 @@ function drawItems(ctx, items, S, offx, offy, lod, night) {
         }
       }
       // roof
-      const rc = PAL.roof[it.roofc] || PAL.roof.g; const top = it.rings.map(r => r.map(p => [p[0], p[1], zt]));
+      const rc = it.rc; const top = it.rings.map(r => r.map(p => [p[0], p[1], zt]));
       let rcol = rc[0]; if (night) rcol = shade(rcol, 0.4);
       polyRings(top, rcol, mid ? (night ? shade(rc[2], 0.5) : rc[2]) : null);
       if (it.roof === 'p' && it.ins && it.ins.length >= 3) {
@@ -319,7 +362,8 @@ function drawItems(ctx, items, S, offx, offy, lod, night) {
       polyRings(it.rings, col, mid ? (night ? '#2e2b28' : PAL.bridgeEdge) : null);
     } else if (it.t === 4) { // tree
       const X = px(it.x, it.y, it.z), Y = py(it.x, it.y, it.z); const r = Math.max(2, Math.round((it.big ? (S >= 4 ? 6 : S >= 2 ? 3.5 : 2) : (S >= 4 ? 3 : 2)) * (it.sz || 1)));
-      const tc = night ? ['#213f1f', '#2d4f29', '#162a16', '#2a1d12'] : (it.big ? PAL.tree : [PAL.shrub[0], PAL.shrub[1], PAL.tree[2], PAL.tree[3]]);
+      let tc = night ? ['#213f1f', '#2d4f29', '#162a16', '#2a1d12'] : (it.big ? PAL.tree : [PAL.shrub[0], PAL.shrub[1], PAL.tree[2], PAL.tree[3]]);
+      if (it.shadow && !night) tc = [shade(tc[0], 0.8), shade(tc[1], 0.8), tc[2], tc[3]];
       if (it.big && S >= 2) { ctx.fillStyle = tc[3]; ctx.fillRect(X, Y - 1, 1, 3); }
       ctx.fillStyle = tc[0]; ctx.beginPath(); ctx.ellipse(X, Y - r - 1, r, r * 0.8, 0, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = tc[1]; ctx.beginPath(); ctx.ellipse(X - r * 0.3, Y - r - 1.4 - r * 0.2, r * 0.5, r * 0.35, 0, 0, Math.PI * 2); ctx.fill();
