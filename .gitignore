@@ -1,0 +1,5 @@
+data/raw/
+data/work/
+data/chunks/
+node_modules/
+*.pyc

@@ -1,0 +1,8 @@
+{
+  "cleanUrls": true,
+  "headers": [
+    { "source": "/chunks/(.*)", "headers": [ { "key": "Cache-Control", "value": "public, max-age=86400, s-maxage=31536000" } ] },
+    { "source": "/tiles/(.*)", "headers": [ { "key": "Cache-Control", "value": "public, max-age=86400, s-maxage=31536000" } ] },
+    { "source": "/iso.js", "headers": [ { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" } ] }
+  ]
+}

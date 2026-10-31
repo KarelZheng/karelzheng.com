@@ -1,0 +1,104 @@
+<meta charset="utf-8">
+<title>Tiny Prague</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  /* Layout: full-screen canvas map; floating paper panels pinned to the corners, clear of the phone's safe areas. */
+  :root { --paper: #f4ecd8; --ink: #2b2a28; --accent: #c2583a; --panel: rgba(244,236,216,0.94); --ground: #dcd3bf; --font-ui: "Silkscreen", "Courier New", monospace; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --paper: #1b222c; --ink: #f0e6cf; --accent: #e07a58; --panel: rgba(27,34,44,0.94); --ground: #141a22; color-scheme: dark; } }
+  :root[data-theme="dark"] { --paper: #1b222c; --ink: #f0e6cf; --accent: #e07a58; --panel: rgba(27,34,44,0.94); --ground: #141a22; color-scheme: dark; }
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  body { background: var(--ground); font-family: var(--font-ui); color: var(--ink); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0; box-sizing: border-box; }
+  #map { position: fixed; inset: 0; cursor: grab; image-rendering: pixelated; image-rendering: crisp-edges; touch-action: none; }
+  .panel { position: fixed; background: var(--panel); border: 2px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); padding: 8px 10px; box-sizing: border-box; }
+  #top { top: calc(12px + env(safe-area-inset-top, 0px)); left: max(12px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; gap: 6px; width: min(360px, calc(100vw - 24px)); }
+  #top h1 { margin: 0; font-size: 20px; letter-spacing: 1px; line-height: 1; text-wrap: balance; }
+  #top h1 span { color: var(--accent); }
+  #top .sub { font-size: 10px; opacity: .8; }
+  #search { width: 100%; box-sizing: border-box; font: 12px var(--font-ui); padding: 6px 8px; border: 2px solid var(--ink); background: var(--paper); color: var(--ink); outline: none; }
+  #search:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  #results { list-style: none; margin: 0; padding: 0; max-height: 220px; overflow: auto; }
+  #results li { padding: 5px 8px; font-size: 11px; cursor: pointer; border-top: 1px dashed rgba(128,128,128,.4); }
+  #results li:hover, #results li.sel { background: var(--accent); color: #fff; }
+  #results small { opacity: .7; }
+  #chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .chip { font: 10px var(--font-ui); padding: 4px 6px; border: 2px solid var(--ink); background: var(--paper); cursor: pointer; color: var(--ink); }
+  .chip:hover, .chip:focus-visible { background: var(--accent); color: #fff; outline: none; }
+  #ctl { right: max(12px, env(safe-area-inset-right, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); display: flex; flex-direction: column; gap: 6px; padding: 6px; }
+  #ctl button { font: 14px var(--font-ui); width: 34px; height: 34px; border: 2px solid var(--ink); background: var(--paper); color: var(--ink); cursor: pointer; }
+  #ctl button:hover, #ctl button:focus-visible { background: var(--accent); color: #fff; outline: none; }
+  #foot { left: max(12px, env(safe-area-inset-left, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); font-size: 9px; line-height: 1.5; max-width: calc(100vw - 24px); }
+  #foot a { color: inherit; }
+  #minimap { right: max(12px, env(safe-area-inset-right, 0px)); bottom: calc(44px + env(safe-area-inset-bottom, 0px)); width: 180px; height: 120px; padding: 0; cursor: pointer; image-rendering: pixelated; }
+  @media (max-width: 600px) { #minimap { display: none; } }
+  #zoom { right: max(12px, env(safe-area-inset-right, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); font-size: 10px; padding: 4px 8px; font-variant-numeric: tabular-nums; }
+  #about { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 10; align-items: center; justify-content: center; padding: 16px; }
+  #about .box { background: var(--panel); border: 2px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); max-width: 560px; padding: 18px 20px; font-size: 11px; line-height: 1.7; max-height: 80vh; overflow: auto; }
+  #about h2 { margin: 0 0 8px; font-size: 16px; }
+  #about .box button { float: right; }
+  #loading { position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); font-size: 12px; pointer-events: none; }
+  @media (max-width: 600px) { #top { width: calc(100vw - 84px); } #top h1 { font-size: 16px; } #chips { display: none; } #foot { display: none; } }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<canvas id="map"></canvas>
+<div id="loading" class="panel">drawing Prague...</div>
+<div id="top" class="panel">
+  <h1>TINY <span>PRAGUE</span></h1>
+  <div class="sub">Praha 1-8 as isometric pixel art. Drag to pan, scroll to zoom.</div>
+  <input id="search" type="search" placeholder="Search a place, street, station..." autocomplete="off">
+  <ul id="results"></ul>
+  <div id="chips"></div>
+</div>
+<div id="ctl" class="panel">
+  <button id="zin" title="zoom in (+)">+</button>
+  <button id="zout" title="zoom out (-)">-</button>
+  <button id="night" title="night (n)">N</button>
+  <button id="lbl" title="labels (l)">L</button>
+  <button id="share" title="copy link">@</button>
+  <button id="info" title="about">?</button>
+</div>
+<canvas id="minimap" class="panel" width="180" height="120" title="click to jump"></canvas>
+<div id="zoom" class="panel">2.0 px/m</div>
+<div id="foot" class="panel">Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors (ODbL). Elevation: DMR 5G / DMP &copy; <a href="https://geoportal.cuzk.cz">ČÚZK</a>. Drawn procedurally in your browser.</div>
+<div id="about"><div class="box">
+  <button class="chip" id="closeabout">close</button>
+  <h2>Tiny Prague</h2>
+  <p>Every building, street, tram line, park and the Vltava on this map is drawn from data, in your browser, as you pan. Buildings are extruded from OpenStreetMap footprints; their heights come from the Czech national surface model (DMP) minus the terrain model (DMR 5G), so the hills of Petřín, Hradčany, Letná, Vyšehrad and Žižkov are real.</p>
+  <p>Red tiled roofs mark the old city fabric, grey flat roofs the newer blocks, copper the churches. Bridges sit at the height of their abutments; trams run on their own tracks.</p>
+  <p>Keys: arrows pan, + / - zoom, N night, L labels. The URL remembers where you are.</p>
+  <p>Inspired by <a href="https://isometric.nyc">isometric.nyc</a> and <a href="https://tiny.london">tiny.london</a>. Data: OpenStreetMap (ODbL), ČÚZK DMR 5G and DMP.</p>
+</div></div>
+<script src="iso.js"></script>
+<script>
+(function () {
+  const LANDMARKS = [
+    ['Pražský hrad', 14.4005, 50.0909, 3], ['Karlův most', 14.4114, 50.0865, 4], ['Staroměstské nám.', 14.4208, 50.0875, 4], ['Václavské nám.', 14.4270, 50.0812, 2],
+    ['Petřín', 14.3950, 50.0835, 2], ['Vyšehrad', 14.4185, 50.0645, 2], ['Žižkovská věž', 14.4511, 50.0810, 2], ['Letná', 14.4195, 50.0953, 2],
+    ['Národní divadlo', 14.4136, 50.0813, 4], ['Tančící dům', 14.4143, 50.0755, 4], ['Karlín', 14.4515, 50.0930, 1], ['Holešovice', 14.4400, 50.1030, 1],
+    ['Anděl', 14.4038, 50.0710, 2], ['Vítězné nám.', 14.3920, 50.1005, 2], ['Strahov', 14.3870, 50.0810, 1], ['Zoo Troja', 14.4100, 50.1170, 1], ['Hlavní nádraží', 14.4356, 50.0830, 2]
+  ];
+  const chips = document.getElementById('chips');
+  for (const [n, lon, lat, s] of LANDMARKS) { const b = document.createElement('button'); b.className = 'chip'; b.textContent = n; b.onclick = () => TP.goToLonLat(lon, lat, s); chips.appendChild(b); }
+  document.getElementById('zin').onclick = () => TP.zoomAt(innerWidth / 2, innerHeight / 2, 2);
+  document.getElementById('zout').onclick = () => TP.zoomAt(innerWidth / 2, innerHeight / 2, 0.5);
+  document.getElementById('night').onclick = () => TP.toggleNight();
+  let lbl = true; document.getElementById('lbl').onclick = () => { lbl = !lbl; TP.labels = lbl; };
+  document.getElementById('share').onclick = async () => { try { await navigator.clipboard.writeText(location.href); document.getElementById('share').textContent = 'ok'; setTimeout(() => document.getElementById('share').textContent = '@', 1200); } catch (e) { prompt('Link', location.href); } };
+  document.getElementById('info').onclick = () => document.getElementById('about').style.display = 'flex';
+  document.getElementById('closeabout').onclick = () => document.getElementById('about').style.display = 'none';
+  document.getElementById('about').addEventListener('click', e => { if (e.target.id === 'about') e.target.style.display = 'none'; });
+  // search
+  let PLACES = null; const inp = document.getElementById('search'), res = document.getElementById('results'); let sel = -1, cur = [];
+  fetch((window.TP_DATA_BASE || 'chunks/') + 'labels.json').then(r => r.json()).then(j => { PLACES = j; }).catch(() => { PLACES = []; });
+  const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  function show(list) { cur = list; sel = -1; res.innerHTML = ''; for (const p of list) { const li = document.createElement('li'); li.innerHTML = p[0] + (p[4] && p[4] !== p[0] ? ' <small>' + p[4] + '</small>' : '') + ' <small>' + ['city', 'district', 'quarter', 'neighbourhood', 'place', 'landmark', 'station', 'street'][p[3]] + '</small>'; li.onclick = () => go(p); res.appendChild(li); } }
+  function go(p) { TP.goToXY(p[1], p[2], p[3] >= 5 ? 4 : p[3] >= 3 ? 2 : 1); res.innerHTML = ''; inp.value = p[0]; inp.blur(); }
+  inp.addEventListener('input', () => { const q = norm(inp.value.trim()); if (!PLACES || q.length < 2) { res.innerHTML = ''; return; } const hits = PLACES.filter(p => norm(p[0]).includes(q) || (p[4] && norm(p[4]).includes(q))); hits.sort((a, b) => (norm(a[0]).startsWith(q) ? 0 : 1) - (norm(b[0]).startsWith(q) ? 0 : 1) || a[3] - b[3]); show(hits.slice(0, 12)); });
+  inp.addEventListener('keydown', e => { if (e.key === 'ArrowDown') { sel = Math.min(cur.length - 1, sel + 1); } else if (e.key === 'ArrowUp') { sel = Math.max(0, sel - 1); } else if (e.key === 'Enter') { if (cur[sel >= 0 ? sel : 0]) go(cur[sel >= 0 ? sel : 0]); return; } else if (e.key === 'Escape') { res.innerHTML = ''; return; } else return; e.preventDefault(); [...res.children].forEach((li, i) => li.classList.toggle('sel', i === sel)); });
+  const ld = document.getElementById('loading'); let n0 = 0; const iv = setInterval(() => { n0++; if (TP.INDEX && (TP.CHUNKS.size > 3 || n0 > 8)) { ld.style.display = 'none'; clearInterval(iv); } }, 300);
+})();
+</script>
