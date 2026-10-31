@@ -1,3 +1,6 @@
+<!doctype html>
+<html lang="en">
+<head>
 <meta charset="utf-8">
 <title>Tiny Prague</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -42,6 +45,8 @@
   @media (max-width: 600px) { #top { width: calc(100vw - 84px); } #top h1 { font-size: 16px; } #chips { display: none; } #foot { display: none; } }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
+</head>
+<body>
 </head>
 <body>
 <canvas id="map"></canvas>
@@ -102,3 +107,5 @@
   const ld = document.getElementById('loading'); let n0 = 0; const iv = setInterval(() => { n0++; if (TP.INDEX && (TP.CHUNKS.size > 3 || n0 > 8)) { ld.style.display = 'none'; clearInterval(iv); } }, 300);
 })();
 </script>
+</body>
+</html>
