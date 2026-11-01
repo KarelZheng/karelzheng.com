@@ -292,7 +292,7 @@ setPins(pinsOn); setPix(PIX);
 
 function curLatLonS() { const t = controls.target; const [lon, lat] = AFF.inv(t.x + X0, -t.z + Y0); const S = 900 / camera.position.distanceTo(t); return [lat, lon, S]; }
 let hashT = 0;
-function syncHash() { clearTimeout(hashT); hashT = setTimeout(() => { const [lat, lon, S] = curLatLonS(); const h = '#p-' + Math.round(lat * 1e5) + '-' + Math.round(lon * 1e5) + '-' + Math.round(S * 1000); try { history.replaceState(null, '', h); } catch (e) {} $('flat').href = '/ai/' + h; }, 250); }
+function syncHash() { if (!AFF) return; clearTimeout(hashT); hashT = setTimeout(() => { const [lat, lon, S] = curLatLonS(); const h = '#p-' + Math.round(lat * 1e5) + '-' + Math.round(lon * 1e5) + '-' + Math.round(S * 1000); try { history.replaceState(null, '', h); } catch (e) {} $('flat').href = '/ai/' + h; }, 250); }
 controls.addEventListener('change', syncHash);
 
 // search: startups first, then places/streets from the procedural map's index
