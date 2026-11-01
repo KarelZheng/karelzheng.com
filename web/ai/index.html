@@ -57,6 +57,18 @@
   #card .addr { opacity: .7; font-size: 10px; }
   #card a { color: var(--accent); margin-right: 10px; }
   #ctl button.on { background: var(--accent); color: #fff; }
+  #walkhud { left: 50%; transform: translateX(-50%); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); display: none; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 10px; max-width: min(640px, calc(100vw - 24px)); }
+  body.walking #walkhud { display: flex; } body.walking #foot { display: none; } body.walking #card { bottom: 120px; }
+  #walkhud b { font-size: 16px; color: var(--accent); min-width: 104px; white-space: nowrap; }
+  #walkhud .chip { float: none; }
+  #wbtns { display: flex; gap: 4px; flex-wrap: wrap; }
+  #wbtns button { font: 10px var(--font-ui); padding: 4px 6px; border: 2px solid var(--ink); background: var(--paper); color: var(--ink); cursor: pointer; }
+  #wbtns button.on { background: var(--accent); color: #fff; }
+  #whint { flex-basis: 100%; opacity: .75; line-height: 1.5; }
+  body.picking #osd { cursor: crosshair; }
+  body.placed #osd { cursor: pointer; }
+  #walker { position: fixed; z-index: 4; display: none; pointer-events: none; image-rendering: pixelated; filter: drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff); }
+  #wshadow { position: fixed; z-index: 3; display: none; width: 20px; height: 8px; border-radius: 50%; background: rgba(0,0,0,.35); pointer-events: none; }
   @media (max-width: 600px) { #card { left: 12px; right: 12px; width: auto; } }
   @media (max-width: 600px) { #top { width: calc(100vw - 84px); } #top h1 { font-size: 13px; } #foot { display: none; } }
 </style>
@@ -66,7 +78,7 @@
 <div id="loading">loading...</div>
 <div id="top" class="panel">
   <h1>TINY <span>PRAGUE</span> STARTUPS</h1>
-  <div class="sub">58 startups and funds on one pixel-art painting of Prague. Drag to pan, scroll to zoom.</div>
+  <div class="sub">58 startups and funds on one pixel-art painting of Prague. Drag to pan, scroll to zoom. Press the walker to walk around.</div>
   <input id="search" type="search" placeholder="Search a startup, place, street..." autocomplete="off">
   <ul id="results"></ul>
 </div>
@@ -75,10 +87,12 @@
   <button id="zout" title="zoom out (-)">-</button>
   <a id="proc" href="/" title="procedural version (p)">P</a>
   <button id="pins" class="on" title="Prague startup galaxy (s)">&#9733;</button>
+  <button id="walk" title="walk around">&#128694;</button>
   <button id="share" title="copy link">@</button>
   <button id="info" title="about">?</button>
 </div>
 <div id="foot" class="panel">Drawn by Qwen-Image with the <a href="https://tiny.london/how/">tiny.london</a> LoRA over Google Photorealistic 3D Tiles. Imagery &copy; Google. Labels &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors.</div>
+<div id="walkhud" class="panel"><b id="wspeed">150 km/h</b><span id="wbtns"><button data-s="0">walk</button><button data-s="1">run</button><button data-s="2">bike</button><button data-s="3">fast</button><button data-s="4">faster</button><button data-s="5">warp</button></span><button class="chip" id="wnew">new start</button><button class="chip" id="wstop">stop</button><div id="whint"></div></div>
 <div id="card" class="panel"><button class="chip" id="closecard">close</button><h3 id="cname"></h3><div id="cdesc"></div><div class="addr" id="caddr"></div><div id="clinks"></div></div>
 <div id="about"><div class="box">
   <button class="chip" id="closeabout">close</button>
@@ -209,6 +223,10 @@
     else if (e.key === "Escape") { hits = []; render(); }
   };
   $("results").onmousedown = e => { const li = e.target.closest("li[data-i]"); if (li) { e.preventDefault(); pick(hits[+li.dataset.i]); } };
+
+  // walk mode (walk.js)
+  window.TP = { viewer, meta, CO, pinEls, showCard, goTo, exists: (x, y) => sets["0"] && sets["0"].has(Math.floor(x / meta.tile) + "_" + Math.floor(y / meta.tile)) };
+  const ws = document.createElement("script"); ws.src = "/ai/walk.js"; document.body.appendChild(ws);
 })();
 </script>
 </body>
