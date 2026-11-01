@@ -73,7 +73,6 @@
 <div id="ctl" class="panel">
   <button id="zin" title="zoom in (+)">+</button>
   <button id="zout" title="zoom out (-)">-</button>
-  <a id="fly3d" href="/3d/" title="fly around in 3D">3D</a>
   <a id="proc" href="/" title="procedural version (p)">P</a>
   <button id="pins" class="on" title="Prague startup galaxy (s)">&#9733;</button>
   <button id="share" title="copy link">@</button>
@@ -161,7 +160,7 @@
   document.getElementById("closecard").onclick = () => { document.getElementById("card").classList.remove("on"); if (selPin) selPin.classList.remove("sel"); };
 
   let t = 0;
-  const syncHash = () => { clearTimeout(t); t = setTimeout(() => { try { history.replaceState(null, "", curHash()); } catch (e) {} document.getElementById("proc").href = "/" + curHash(); document.getElementById("fly3d").href = "/3d/" + curHash(); }, 150); };
+  const syncHash = () => { clearTimeout(t); t = setTimeout(() => { try { history.replaceState(null, "", curHash()); } catch (e) {} document.getElementById("proc").href = "/" + curHash(); }, 150); };
   viewer.addHandler("animation-finish", syncHash);
 
   // controls
