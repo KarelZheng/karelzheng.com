@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Tiny Prague · painted</title>
-<meta name="description" content="Prague 1 to 8 as one isometric pixel-art painting, drawn by a diffusion model over Google's photorealistic 3D tiles.">
+<title>Tiny Prague Startups</title>
+<meta name="description" content="Prague's tech startups and funds on one isometric pixel-art painting of the city.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -16,7 +16,7 @@
   #osd { position: fixed; inset: 0; background: var(--ground); }
   .panel { position: fixed; z-index: 5; background: var(--panel); border: 2px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); padding: 8px 10px; box-sizing: border-box; }
   #top { left: max(12px, env(safe-area-inset-left, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); width: 300px; display: flex; flex-direction: column; gap: 6px; }
-  #top h1 { margin: 0; font-size: 20px; letter-spacing: 1px; line-height: 1; }
+  #top h1 { margin: 0; font-size: 17px; letter-spacing: 1px; line-height: 1; }
   #top h1 span { color: var(--accent); }
   #top .sub { font-size: 10px; opacity: .8; line-height: 1.5; }
   #search { width: 100%; box-sizing: border-box; font: 12px var(--font-ui); padding: 6px 8px; border: 2px solid var(--ink); background: var(--paper); color: var(--ink); outline: none; }
@@ -58,15 +58,15 @@
   #card a { color: var(--accent); margin-right: 10px; }
   #ctl button.on { background: var(--accent); color: #fff; }
   @media (max-width: 600px) { #card { left: 12px; right: 12px; width: auto; } }
-  @media (max-width: 600px) { #top { width: calc(100vw - 84px); } #top h1 { font-size: 16px; } #foot { display: none; } }
+  @media (max-width: 600px) { #top { width: calc(100vw - 84px); } #top h1 { font-size: 13px; } #foot { display: none; } }
 </style>
 </head>
 <body>
 <div id="osd"></div>
 <div id="loading">loading...</div>
 <div id="top" class="panel">
-  <h1>TINY <span>PRAGUE</span></h1>
-  <div class="sub">Praha 1-8 as one painting, 68,608 x 38,912 px. Drag to pan, scroll to zoom.</div>
+  <h1>TINY <span>PRAGUE</span> STARTUPS</h1>
+  <div class="sub">58 startups and funds on one pixel-art painting of Prague. Drag to pan, scroll to zoom.</div>
   <input id="search" type="search" placeholder="Search a startup, place, street..." autocomplete="off">
   <ul id="results"></ul>
 </div>
@@ -82,7 +82,7 @@
 <div id="card" class="panel"><button class="chip" id="closecard">close</button><h3 id="cname"></h3><div id="cdesc"></div><div class="addr" id="caddr"></div><div id="clinks"></div></div>
 <div id="about"><div class="box">
   <button class="chip" id="closeabout">close</button>
-  <h2>Tiny Prague, painted</h2>
+  <h2>Tiny Prague Startups</h2>
   <p>This version is not drawn from rules. Google's photorealistic 3D model of Prague was rendered from a fixed isometric camera into 1,415 frames of 1024 px, and an image diffusion model repainted all of it as pixel art.</p>
   <p>The model is Qwen-Image 2.1 Turbo with the public tiny.london LoRA, trained on London. It needed no Prague training. To avoid seams, the whole city was sampled as one image: every denoising step runs the model on overlapping 1024 px windows and blends their predictions, so neighbouring windows agree on every roof and street.</p>
   <p>The <a href="/">procedural version</a> draws the same city from OpenStreetMap and Czech elevation data in your browser. Button P switches between them at the same spot.</p>
