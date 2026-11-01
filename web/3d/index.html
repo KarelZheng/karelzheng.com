@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tiny Prague Startups 3D</title>
+<meta name="description" content="Fly around the painted Prague in 3D, with Prague's startups and funds above their buildings.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root { --paper: #f4ecd8; --ink: #2b2a28; --accent: #c2583a; --panel: rgba(244,236,216,0.94); --font-ui: "Silkscreen", "Courier New", monospace; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --paper: #1b222c; --ink: #f0e6cf; --accent: #e07a58; --panel: rgba(27,34,44,0.94); color-scheme: dark; } }
+  :root[data-theme="dark"] { --paper: #1b222c; --ink: #f0e6cf; --accent: #e07a58; --panel: rgba(27,34,44,0.94); color-scheme: dark; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #cfe3ec; font-family: var(--font-ui); color: var(--ink); }
+  canvas#c { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; touch-action: none; }
+  .panel { position: fixed; z-index: 5; background: var(--panel); border: 2px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); padding: 8px 10px; box-sizing: border-box; }
+  #top { left: max(12px, env(safe-area-inset-left, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); width: 300px; display: flex; flex-direction: column; gap: 6px; }
+  #top h1 { margin: 0; font-size: 17px; letter-spacing: 1px; line-height: 1.1; }
+  #top h1 span { color: var(--accent); }
+  #top .sub { font-size: 10px; opacity: .8; line-height: 1.5; }
+  #search { width: 100%; box-sizing: border-box; font: 12px var(--font-ui); padding: 6px 8px; border: 2px solid var(--ink); background: var(--paper); color: var(--ink); outline: none; }
+  #search:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  #results { list-style: none; margin: 0; padding: 0; max-height: min(55vh, 420px); overflow: auto; }
+  #results li { padding: 5px 8px; font-size: 11px; cursor: pointer; border-top: 1px dashed rgba(128,128,128,.4); }
+  #results li:hover, #results li.sel { background: var(--accent); color: #fff; }
+  #results small { opacity: .7; }
+  #results li.co { display: flex; gap: 8px; align-items: center; }
+  #results li.co img { width: 24px; height: 24px; border: 2px solid var(--ink); flex: none; }
+  #results li.co span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #results li.hdr { cursor: default; font-size: 10px; opacity: .7; background: none !important; color: inherit !important; }
+  #ctl { right: max(12px, env(safe-area-inset-right, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); display: flex; flex-direction: column; gap: 6px; padding: 6px; }
+  #ctl button, #ctl a { font: 13px var(--font-ui); width: 34px; height: 34px; border: 2px solid var(--ink); background: var(--paper); color: var(--ink); cursor: pointer; display: grid; place-items: center; text-decoration: none; box-sizing: border-box; padding: 0; }
+  #ctl button:hover, #ctl a:hover, #ctl button.on { background: var(--accent); color: #fff; }
+  #help { left: max(12px, env(safe-area-inset-left, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); font-size: 9px; line-height: 1.6; max-width: calc(100vw - 24px); }
+  #help a { color: var(--accent); }
+  #card { right: max(12px, env(safe-area-inset-right, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); width: 300px; display: none; font-size: 11px; line-height: 1.6; }
+  #card.on { display: block; }
+  #card h3 { margin: 0 0 4px; font-size: 14px; padding-right: 50px; display: flex; gap: 8px; align-items: center; }
+  #card h3 img { width: 28px; height: 28px; border: 2px solid var(--ink); }
+  #card .addr { opacity: .7; font-size: 10px; }
+  #card a { color: var(--accent); margin-right: 10px; }
+  .chip { font: 10px var(--font-ui); padding: 4px 6px; border: 2px solid var(--ink); background: var(--paper); cursor: pointer; color: var(--ink); float: right; }
+  #loading { position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); font-size: 12px; z-index: 4; pointer-events: none; }
+  .tag { position: fixed; z-index: 3; transform: translate(-50%, -100%); pointer-events: auto; cursor: pointer; display: flex; flex-direction: column; align-items: center; }
+  .tag .lg { width: 30px; height: 30px; border: 2px solid #2b2a28; box-shadow: 2px 2px 0 #2b2a28; background: #fff center/cover no-repeat; }
+  .tag .st { width: 2px; height: 14px; background: #2b2a28; }
+  .tag .nm { position: absolute; bottom: 50px; white-space: nowrap; font: 10px var(--font-ui); background: var(--panel); color: var(--ink); border: 2px solid var(--ink); padding: 2px 5px; display: none; }
+  .tag:hover .nm, .tag.sel .nm, body.names .tag.near .nm { display: block; }
+  .tag:hover, .tag.sel { z-index: 4; }
+  .tag:hover .lg, .tag.sel .lg { border-color: var(--accent); width: 40px; height: 40px; }
+  body.nopins .tag { display: none; }
+  @media (max-width: 600px) { #top { width: calc(100vw - 84px); } #top h1 { font-size: 13px; } #help { display: none; } #card { left: 12px; right: 12px; width: auto; } }
+</style>
+</head>
+<body class="names">
+<canvas id="c"></canvas>
+<div id="loading">loading the city...</div>
+<div id="top" class="panel">
+  <h1>TINY <span>PRAGUE</span> STARTUPS <span style="color:inherit;opacity:.6">3D</span></h1>
+  <div class="sub">The painted Prague in 3D. Drag to move, right-drag to turn, scroll to zoom, WASD to fly.</div>
+  <input id="search" type="search" placeholder="Search a startup, place, street..." autocomplete="off">
+  <ul id="results"></ul>
+</div>
+<div id="ctl" class="panel">
+  <button id="zin" title="closer">+</button>
+  <button id="zout" title="further">-</button>
+  <button id="pins" class="on" title="startups">&#9733;</button>
+    <a id="flat" href="/ai/" title="painted map (2d)">2D</a>
+  <button id="share" title="copy link">@</button>
+</div>
+<div id="help" class="panel">Drag: move &middot; right-drag or ctrl-drag: turn and tilt &middot; scroll: zoom &middot; WASD: fly &middot; Q/E: down/up &middot; shift: faster. Painted from Google Photorealistic 3D Tiles (imagery &copy; Google) from four directions, on <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> and ČÚZK lidar geometry. Startups from <a href="https://www.pampam.city/prague-startup-galaxy-fymXihuqWgzHmKnSSsN8">Prague Startup Galaxy</a>.</div>
+<div id="card" class="panel"><button class="chip" id="closecard">close</button><h3><img id="clogo" alt=""><span id="cname"></span></h3><div id="cdesc"></div><div class="addr" id="caddr"></div><div id="clinks"></div></div>
+
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
+</script>
+<script type="module" src="./painted3d.js"></script>
+</body>
+</html>
