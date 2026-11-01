@@ -37,6 +37,22 @@
   #about h2 { margin: 0 0 8px; font-size: 16px; }
   #about a { color: var(--accent); }
   .chip { font: 10px var(--font-ui); padding: 4px 6px; border: 2px solid var(--ink); background: var(--paper); cursor: pointer; color: var(--ink); float: right; }
+  .pin { position: relative; transform: translateY(2px); cursor: pointer; display: flex; flex-direction: column; align-items: center; pointer-events: auto; }
+  .pin .dot { width: 14px; height: 14px; background: var(--accent); border: 2px solid #2b2a28; box-shadow: 2px 2px 0 #2b2a28; display: grid; place-items: center; color: #fff; font: 9px var(--font-ui); line-height: 1; }
+  .pin .stem { width: 2px; height: 8px; background: #2b2a28; }
+  .pin .nm { position: absolute; bottom: 30px; white-space: nowrap; font: 10px var(--font-ui); background: var(--panel); color: var(--ink); border: 2px solid var(--ink); padding: 2px 5px; display: none; }
+  #osd.names .pin .nm { display: block; }
+  .pin:hover .nm, .pin.sel .nm { display: block; z-index: 3; }
+  .pin:hover, .pin.sel { z-index: 6; }
+  .pin:hover .dot, .pin.sel .dot { background: #ffd166; color: #2b2a28; }
+  #osd.nopins .pin { display: none; }
+  #card { right: max(12px, env(safe-area-inset-right, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); width: 300px; display: none; font-size: 11px; line-height: 1.6; }
+  #card.on { display: block; }
+  #card h3 { margin: 0 0 4px; font-size: 14px; padding-right: 50px; }
+  #card .addr { opacity: .7; font-size: 10px; }
+  #card a { color: var(--accent); margin-right: 10px; }
+  #ctl button.on { background: var(--accent); color: #fff; }
+  @media (max-width: 600px) { #card { left: 12px; right: 12px; width: auto; } }
   @media (max-width: 600px) { #top { width: calc(100vw - 84px); } #top h1 { font-size: 16px; } #foot { display: none; } }
 </style>
 </head>
@@ -53,23 +69,27 @@
   <button id="zin" title="zoom in (+)">+</button>
   <button id="zout" title="zoom out (-)">-</button>
   <a id="proc" href="/" title="procedural version (p)">P</a>
+  <button id="pins" class="on" title="Prague startup galaxy (s)">&#9733;</button>
   <button id="share" title="copy link">@</button>
   <button id="info" title="about">?</button>
 </div>
 <div id="foot" class="panel">Drawn by Qwen-Image with the <a href="https://tiny.london/how/">tiny.london</a> LoRA over Google Photorealistic 3D Tiles. Imagery &copy; Google. Labels &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors.</div>
+<div id="card" class="panel"><button class="chip" id="closecard">close</button><h3 id="cname"></h3><div id="cdesc"></div><div class="addr" id="caddr"></div><div id="clinks"></div></div>
 <div id="about"><div class="box">
   <button class="chip" id="closeabout">close</button>
   <h2>Tiny Prague, painted</h2>
   <p>This version is not drawn from rules. Google's photorealistic 3D model of Prague was rendered from a fixed isometric camera into 1,415 frames of 1024 px, and an image diffusion model repainted all of it as pixel art.</p>
   <p>The model is Qwen-Image 2.1 Turbo with the public tiny.london LoRA, trained on London. It needed no Prague training. To avoid seams, the whole city was sampled as one image: every denoising step runs the model on overlapping 1024 px windows and blends their predictions, so neighbouring windows agree on every roof and street.</p>
   <p>The <a href="/">procedural version</a> draws the same city from OpenStreetMap and Czech elevation data in your browser. Button P switches between them at the same spot.</p>
+  <p>The &#9733; pins are the <a href="https://www.pampam.city/prague-startup-galaxy-fymXihuqWgzHmKnSSsN8">Prague Startup Galaxy</a> map on PamPam: 58 Prague tech companies and funds.</p>
   <p>Inspired by <a href="https://isometric.nyc">isometric.nyc</a> and <a href="https://tiny.london">tiny.london</a>.</p>
 </div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/openseadragon/5.0.1/openseadragon.min.js"></script>
 <script>
 (async () => {
   const BASE = window.TILE_BASE || "/ai/tiles";
-  const [meta, geo] = await Promise.all([fetch(BASE + "/meta.json").then(r => r.json()), fetch(BASE + "/labels.json").then(r => r.json())]);
+  const [meta, geo, comp] = await Promise.all([fetch(BASE + "/meta.json").then(r => r.json()), fetch(BASE + "/labels.json").then(r => r.json()), fetch(BASE + "/companies.json").then(r => r.json()).catch(() => ({ companies: [] }))]);
+  const CO = comp.companies;
   const maxLevel = meta.levels - 1;
   const sets = {}; for (const z in meta.tiles) sets[z] = new Set(meta.tiles[z].map(t => t[0] + "_" + t[1]));
   // lat/lon <-> image px (affine fit of the orthographic camera; ~3 m accuracy)
@@ -108,6 +128,32 @@
     if (m) goToLL(+m[1] / 1e5, +m[2] / 1e5, Math.max(0.02, Math.min(20, +m[3] / 1000)), true);
     else goToLL(50.0865, 14.4135, 2, true); // Charles Bridge
   });
+  // --- Prague Startup Galaxy pins
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  let selPin = null;
+  const showCard = (c, el) => {
+    if (selPin) selPin.classList.remove("sel"); selPin = el; if (el) el.classList.add("sel");
+    document.getElementById("cname").textContent = c.name; document.getElementById("cdesc").textContent = c.desc; document.getElementById("caddr").textContent = c.address;
+    document.getElementById("clinks").innerHTML = (c.url ? `<a href="${esc(c.url)}" target="_blank" rel="noopener">website</a>` : "") + (c.linkedin ? `<a href="${esc(c.linkedin)}" target="_blank" rel="noopener">linkedin</a>` : "");
+    document.getElementById("card").classList.add("on");
+  };
+  const pinEls = [];
+  viewer.addHandler("open", () => CO.forEach(c => {
+    const el = document.createElement("div"); el.className = "pin"; el.title = c.name;
+    el.innerHTML = `<div class="nm">${esc(c.name)}</div><div class="dot">${esc(c.name[0].toUpperCase())}</div><div class="stem"></div>`;
+    viewer.addOverlay({ element: el, location: vp().imageToViewportCoordinates(new OpenSeadragon.Point(c.x, c.y)), placement: OpenSeadragon.Placement.BOTTOM, checkResize: false });
+    new OpenSeadragon.MouseTracker({ element: el, clickHandler: () => showCard(c, el) });
+    pinEls.push(el);
+  }));
+  const osdEl = document.getElementById("osd");
+  const nameToggle = () => { const S = vp().viewportToImageZoom(vp().getZoom()) * PX_PER_M; osdEl.classList.toggle("names", S >= 0.7); };
+  viewer.addHandler("zoom", nameToggle); viewer.addHandler("open", nameToggle);
+  let pinsOn = true; try { pinsOn = localStorage.getItem("tp-pins") !== "0"; } catch (e) {}
+  const setPins = on => { pinsOn = on; osdEl.classList.toggle("nopins", !on); document.getElementById("pins").classList.toggle("on", on); try { localStorage.setItem("tp-pins", on ? "1" : "0"); } catch (e) {} if (!on) document.getElementById("card").classList.remove("on"); };
+  setPins(pinsOn);
+  document.getElementById("pins").onclick = () => setPins(!pinsOn);
+  document.getElementById("closecard").onclick = () => { document.getElementById("card").classList.remove("on"); if (selPin) selPin.classList.remove("sel"); };
+
   let t = 0;
   const syncHash = () => { clearTimeout(t); t = setTimeout(() => { try { history.replaceState(null, "", curHash()); } catch (e) {} document.getElementById("proc").href = "/" + curHash(); }, 150); };
   viewer.addHandler("animation-finish", syncHash);
@@ -122,21 +168,25 @@
   addEventListener("keydown", e => {
     if (e.target.tagName === "INPUT") return;
     if (e.key === "+" || e.key === "=") vp().zoomBy(2); else if (e.key === "-") vp().zoomBy(0.5);
+    else if (e.key === "s") setPins(!pinsOn);
     else if (e.key === "p") location.href = "/" + curHash(); else if (e.key === "Escape") $("about").classList.remove("on");
   });
 
   // search (same index as the procedural map, projected into this canvas)
-  const L = geo.labels; const KIND = ["city", "district", "quarter", "station", "museum", "landmark", "park", "street"];
+  const L = CO.map(c => [c.name, c.x, c.y, 8, c.desc, c]).concat(geo.labels); const KIND = ["city", "district", "quarter", "station", "museum", "landmark", "park", "street", "startup"];
   const norm = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
   const NL = L.map(l => norm(l[0] + " " + (l[4] || "")));
   let sel = -1, hits = [];
   const render = () => { $("results").innerHTML = hits.map((h, i) => `<li data-i="${i}" class="${i === sel ? "sel" : ""}">${h[0]}${h[4] ? " <small>" + h[4] + "</small>" : ""} <small>${KIND[h[3]] || ""}</small></li>`).join(""); };
-  const pick = h => { goTo(h[1], h[2], h[3] <= 1 ? 0.5 : 3, false); hits = []; render(); $("search").blur(); };
+  const pick = h => {
+    goTo(h[1], h[2], h[3] <= 1 ? 0.5 : 3, false); hits = []; render(); $("search").blur();
+    if (h[5]) { setPins(true); showCard(h[5], pinEls[CO.indexOf(h[5])]); }
+  };
   $("search").oninput = () => {
     const q = norm($("search").value.trim()); sel = -1;
     if (q.length < 2) { hits = []; render(); return; }
     const out = []; for (let i = 0; i < L.length && out.length < 40; i++) if (NL[i].includes(q)) out.push(L[i]);
-    out.sort((a, b) => (norm(a[0]).startsWith(q) ? 0 : 1) - (norm(b[0]).startsWith(q) ? 0 : 1) || a[3] - b[3]);
+    out.sort((a, b) => (b[3] === 8) - (a[3] === 8) || (norm(a[0]).startsWith(q) ? 0 : 1) - (norm(b[0]).startsWith(q) ? 0 : 1) || a[3] - b[3]);
     hits = out.slice(0, 12); render();
   };
   $("search").onkeydown = e => {
