@@ -21,7 +21,7 @@
   #top .sub { font-size: 10px; opacity: .8; line-height: 1.5; }
   #search { width: 100%; box-sizing: border-box; font: 12px var(--font-ui); padding: 6px 8px; border: 2px solid var(--ink); background: var(--paper); color: var(--ink); outline: none; }
   #search:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-  #results { list-style: none; margin: 0; padding: 0; max-height: 220px; overflow: auto; }
+  #results { list-style: none; margin: 0; padding: 0; max-height: min(55vh, 420px); overflow: auto; }
   #results li { padding: 5px 8px; font-size: 11px; cursor: pointer; border-top: 1px dashed rgba(128,128,128,.4); }
   #results li:hover, #results li.sel { background: var(--accent); color: #fff; }
   #results small { opacity: .7; }
@@ -38,13 +38,18 @@
   #about a { color: var(--accent); }
   .chip { font: 10px var(--font-ui); padding: 4px 6px; border: 2px solid var(--ink); background: var(--paper); cursor: pointer; color: var(--ink); float: right; }
   .pin { position: relative; transform: translateY(2px); cursor: pointer; display: flex; flex-direction: column; align-items: center; pointer-events: auto; }
-  .pin .dot { width: 14px; height: 14px; background: var(--accent); border: 2px solid #2b2a28; box-shadow: 2px 2px 0 #2b2a28; display: grid; place-items: center; color: #fff; font: 9px var(--font-ui); line-height: 1; }
+  .pin .dot { width: 28px; height: 28px; background: #fff center/cover no-repeat; border: 2px solid #2b2a28; box-shadow: 2px 2px 0 #2b2a28; display: grid; place-items: center; color: #2b2a28; font: 12px var(--font-ui); line-height: 1; transition: width .12s, height .12s; }
   .pin .stem { width: 2px; height: 8px; background: #2b2a28; }
-  .pin .nm { position: absolute; bottom: 30px; white-space: nowrap; font: 10px var(--font-ui); background: var(--panel); color: var(--ink); border: 2px solid var(--ink); padding: 2px 5px; display: none; }
+  .pin .nm { position: absolute; bottom: 44px; white-space: nowrap; font: 10px var(--font-ui); background: var(--panel); color: var(--ink); border: 2px solid var(--ink); padding: 2px 5px; display: none; }
   #osd.names .pin .nm { display: block; }
   .pin:hover .nm, .pin.sel .nm { display: block; z-index: 3; }
   .pin:hover, .pin.sel { z-index: 6; }
-  .pin:hover .dot, .pin.sel .dot { background: #ffd166; color: #2b2a28; }
+  .pin:hover .dot, .pin.sel .dot { width: 40px; height: 40px; border-color: var(--accent); box-shadow: 3px 3px 0 #2b2a28; }
+  .pin:hover .nm, .pin.sel .nm { bottom: 56px; }
+  #results li.co { display: flex; gap: 8px; align-items: center; }
+  #results li.co img { width: 24px; height: 24px; border: 2px solid var(--ink); flex: none; image-rendering: auto; }
+  #results li.co span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #results li.hdr { cursor: default; font-size: 10px; opacity: .7; background: none !important; color: inherit !important; }
   #osd.nopins .pin { display: none; }
   #card { right: max(12px, env(safe-area-inset-right, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); width: 300px; display: none; font-size: 11px; line-height: 1.6; }
   #card.on { display: block; }
@@ -62,7 +67,7 @@
 <div id="top" class="panel">
   <h1>TINY <span>PRAGUE</span></h1>
   <div class="sub">Praha 1-8 as one painting, 68,608 x 38,912 px. Drag to pan, scroll to zoom.</div>
-  <input id="search" type="search" placeholder="Search a place, street, station..." autocomplete="off">
+  <input id="search" type="search" placeholder="Search a startup, place, street..." autocomplete="off">
   <ul id="results"></ul>
 </div>
 <div id="ctl" class="panel">
@@ -140,13 +145,13 @@
   const pinEls = [];
   viewer.addHandler("open", () => CO.forEach(c => {
     const el = document.createElement("div"); el.className = "pin"; el.title = c.name;
-    el.innerHTML = `<div class="nm">${esc(c.name)}</div><div class="dot">${esc(c.name[0].toUpperCase())}</div><div class="stem"></div>`;
-    viewer.addOverlay({ element: el, location: vp().imageToViewportCoordinates(new OpenSeadragon.Point(c.x, c.y)), placement: OpenSeadragon.Placement.BOTTOM, checkResize: false });
+    el.innerHTML = `<div class="nm">${esc(c.name)}</div><div class="dot"${c.logo ? ` style="background-image:url('${BASE}/${esc(c.logo)}')"` : ""}>${c.logo ? "" : esc(c.name[0].toUpperCase())}</div><div class="stem"></div>`;
+    viewer.addOverlay({ element: el, location: vp().imageToViewportCoordinates(new OpenSeadragon.Point(c.x, c.y)), placement: OpenSeadragon.Placement.BOTTOM });
     new OpenSeadragon.MouseTracker({ element: el, clickHandler: () => showCard(c, el) });
     pinEls.push(el);
   }));
   const osdEl = document.getElementById("osd");
-  const nameToggle = () => { const S = vp().viewportToImageZoom(vp().getZoom()) * PX_PER_M; osdEl.classList.toggle("names", S >= 0.7); };
+  const nameToggle = () => { const S = vp().viewportToImageZoom(vp().getZoom()) * PX_PER_M; osdEl.classList.toggle("names", S >= 1.5); };
   viewer.addHandler("zoom", nameToggle); viewer.addHandler("open", nameToggle);
   let pinsOn = true; try { pinsOn = localStorage.getItem("tp-pins") !== "0"; } catch (e) {}
   const setPins = on => { pinsOn = on; osdEl.classList.toggle("nopins", !on); document.getElementById("pins").classList.toggle("on", on); try { localStorage.setItem("tp-pins", on ? "1" : "0"); } catch (e) {} if (!on) document.getElementById("card").classList.remove("on"); };
@@ -177,25 +182,33 @@
   const norm = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
   const NL = L.map(l => norm(l[0] + " " + (l[4] || "")));
   let sel = -1, hits = [];
-  const render = () => { $("results").innerHTML = hits.map((h, i) => `<li data-i="${i}" class="${i === sel ? "sel" : ""}">${h[0]}${h[4] ? " <small>" + h[4] + "</small>" : ""} <small>${KIND[h[3]] || ""}</small></li>`).join(""); };
+  let hdr = "";
+  const render = () => {
+    $("results").innerHTML = (hdr && hits.length ? `<li class="hdr">${hdr}</li>` : "") + hits.map((h, i) => h[5]
+      ? `<li data-i="${i}" class="co ${i === sel ? "sel" : ""}"><img src="${BASE}/${esc(h[5].logo || "")}" alt="" loading="lazy"><span>${esc(h[0])} <small>${esc(h[4])}</small></span></li>`
+      : `<li data-i="${i}" class="${i === sel ? "sel" : ""}">${esc(h[0])}${h[4] ? " <small>" + esc(h[4]) + "</small>" : ""} <small>${KIND[h[3]] || ""}</small></li>`).join("");
+  };
+  const listAll = () => { hdr = CO.length + " Prague startups &amp; funds"; hits = L.slice(0, CO.length); sel = -1; render(); };
   const pick = h => {
     goTo(h[1], h[2], h[3] <= 1 ? 0.5 : 3, false); hits = []; render(); $("search").blur();
     if (h[5]) { setPins(true); showCard(h[5], pinEls[CO.indexOf(h[5])]); }
   };
   $("search").oninput = () => {
-    const q = norm($("search").value.trim()); sel = -1;
-    if (q.length < 2) { hits = []; render(); return; }
-    const out = []; for (let i = 0; i < L.length && out.length < 40; i++) if (NL[i].includes(q)) out.push(L[i]);
+    const q = norm($("search").value.trim()); sel = -1; hdr = "";
+    if (!q) { listAll(); return; }
+    const out = []; for (let i = 0; i < L.length && out.length < 60; i++) if (L[i][3] === 8 ? NL[i].includes(q) : (q.length >= 2 && NL[i].includes(q))) out.push(L[i]);
     out.sort((a, b) => (b[3] === 8) - (a[3] === 8) || (norm(a[0]).startsWith(q) ? 0 : 1) - (norm(b[0]).startsWith(q) ? 0 : 1) || a[3] - b[3]);
-    hits = out.slice(0, 12); render();
+    hits = out.slice(0, 20); render();
   };
+  $("search").onfocus = () => { if (!$("search").value.trim()) listAll(); };
+  $("search").onblur = () => setTimeout(() => { if (!$("search").value.trim()) { hits = []; hdr = ""; render(); } }, 200);
   $("search").onkeydown = e => {
     if (e.key === "ArrowDown") { sel = Math.min(hits.length - 1, sel + 1); render(); e.preventDefault(); }
     else if (e.key === "ArrowUp") { sel = Math.max(0, sel - 1); render(); e.preventDefault(); }
     else if (e.key === "Enter" && hits.length) pick(hits[Math.max(0, sel)]);
     else if (e.key === "Escape") { hits = []; render(); }
   };
-  $("results").onclick = e => { const li = e.target.closest("li"); if (li) pick(hits[+li.dataset.i]); };
+  $("results").onmousedown = e => { const li = e.target.closest("li[data-i]"); if (li) { e.preventDefault(); pick(hits[+li.dataset.i]); } };
 })();
 </script>
 </body>
