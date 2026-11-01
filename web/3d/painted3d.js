@@ -3,6 +3,7 @@
    Three.js frame: X = x - X0, Y = z - Z0, Z = -(y - Y0). */
 import * as THREE from 'three';
 import { MapControls } from 'three/addons/controls/MapControls.js';
+import { createRide } from './ride.js';
 
 const BASE = './';
 const $ = id => document.getElementById(id);
@@ -124,12 +125,19 @@ const KEYSD = new Set();
 addEventListener('keydown', e => { if (e.target.tagName === 'INPUT') return; KEYSD.add(e.key.toLowerCase()); });
 addEventListener('keyup', e => KEYSD.delete(e.key.toLowerCase())); addEventListener('blur', () => KEYSD.clear());
 function keyFly(dt) {
-  if (!KEYSD.size) return; const dist = camera.position.distanceTo(controls.target); const sp = Math.max(60, dist * 0.9) * dt * (KEYSD.has('shift') ? 3 : 1);
+  if (!KEYSD.size || RIDE.on) return; const dist = camera.position.distanceTo(controls.target); const sp = Math.max(60, dist * 0.9) * dt * (KEYSD.has('shift') ? 3 : 1);
   const fwd = controls.target.clone().sub(camera.position); fwd.y = 0; fwd.normalize(); const right = new THREE.Vector3().crossVectors(fwd, camera.up).normalize(); const mv = new THREE.Vector3();
   if (KEYSD.has('w') || KEYSD.has('arrowup')) mv.add(fwd); if (KEYSD.has('s') || KEYSD.has('arrowdown')) mv.sub(fwd);
   if (KEYSD.has('d') || KEYSD.has('arrowright')) mv.add(right); if (KEYSD.has('a') || KEYSD.has('arrowleft')) mv.sub(right);
   if (KEYSD.has('e')) mv.y += 0.6; if (KEYSD.has('q')) mv.y -= 0.6;
   if (mv.lengthSq()) { mv.normalize().multiplyScalar(sp); controls.target.add(mv); camera.position.add(mv); FLY = null; }
+}
+
+// ------------------------------------------------------------ scooter
+const RIDE = createRide({ scene, camera, controls, CH, C, X0, Y0, stream, $ });
+let passed = new Set();
+function passBy() {   // riding past a startup opens its card
+  for (const c of CO) { if (!c.world || passed.has(c.name)) continue; const d = Math.hypot(c.world.x - RIDE.S.pos.x, c.world.z - RIDE.S.pos.z); if (d < 40) { passed.add(c.name); showCard(c); } }
 }
 
 // ------------------------------------------------------------ UI
@@ -195,13 +203,15 @@ for (const [k, rec] of CH) if (rec.mesh) { const [cx, cy] = k.split('_').map(Num
 window.setView = (az, el, dist, tx, ty, tz) => place(az, el, dist, tx, ty, tz);
 window.settle = async () => { for (let i = 0; i < 80; i++) { stream(); await new Promise(r => setTimeout(r, 200)); if (!inflight) { stream(); if (!inflight) break; } } renderer.render(scene, camera); updateTags(); };
 window.grab = () => { renderer.render(scene, camera); return canvas.toDataURL('image/png'); };
+window.RIDE = RIDE;
 window.P3D_READY = true;
 
 let last = performance.now(), fr = 0;
 (function loop(now) {
   requestAnimationFrame(loop); now = now || performance.now(); const dt = Math.min(0.1, (now - last) / 1000); last = now;
   if (FLY) { const k = Math.min(1, (now - FLY.t0) / FLY.dur), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2; controls.target.lerpVectors(FLY.ft, FLY.tt, e); camera.position.lerpVectors(FLY.fp, FLY.tp, e); if (k >= 1) FLY = null; }
-  keyFly(dt); controls.update(); if (fr++ % 12 === 0) stream();
+  if (RIDE.on) { RIDE.update(dt); if (fr % 15 === 0) passBy(); } else { keyFly(dt); controls.update(); }
+  if (fr++ % 12 === 0) stream();
   if (!CAPTURE) { renderer.render(scene, camera); updateTags(); }
   if ($('loading') && [...CH.values()].filter(r => r.mesh).length >= 6) $('loading').remove();
 })();

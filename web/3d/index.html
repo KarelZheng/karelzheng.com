@@ -49,6 +49,15 @@
   .tag:hover, .tag.sel { z-index: 4; }
   .tag:hover .lg, .tag.sel .lg { border-color: var(--accent); width: 40px; height: 40px; }
   body.nopins .tag { display: none; }
+  #ridehud { left: 50%; transform: translateX(-50%); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); display: none; align-items: center; gap: 12px; font-size: 10px; max-width: calc(100vw - 24px); }
+  #ridehud b { font-size: 18px; min-width: 110px; white-space: nowrap; color: var(--accent); }
+  #ridehud .chip { float: none; }
+  #ridemsg:empty { display: none; }
+  body.riding #ridehud { display: flex; } body.riding #help { display: none; } body.riding #card { bottom: 80px; }
+  #pad { display: none; position: fixed; z-index: 6; inset: auto 12px calc(80px + env(safe-area-inset-bottom, 0px)) 12px; grid-template-columns: 64px 64px 1fr 64px 64px 64px; gap: 8px; pointer-events: none; }
+  #pad button { pointer-events: auto; height: 64px; font: 12px var(--font-ui); border: 2px solid var(--ink); background: var(--panel); color: var(--ink); box-shadow: 3px 3px 0 var(--ink); touch-action: none; user-select: none; -webkit-user-select: none; }
+  #pad button.on { background: var(--accent); color: #fff; }
+  @media (pointer: coarse) { body.riding #pad { display: grid; } body.riding #ridehud .hint { display: none; } }
   @media (max-width: 600px) { #top { width: calc(100vw - 84px); } #top h1 { font-size: 13px; } #help { display: none; } #card { left: 12px; right: 12px; width: auto; } }
 </style>
 </head>
@@ -57,7 +66,7 @@
 <div id="loading">loading the city...</div>
 <div id="top" class="panel">
   <h1>TINY <span>PRAGUE</span> STARTUPS <span style="color:inherit;opacity:.6">3D</span></h1>
-  <div class="sub">The painted Prague in 3D. Drag to move, right-drag to turn, scroll to zoom, WASD to fly.</div>
+  <div class="sub">The painted Prague in 3D. Drag to move, right-drag to turn, scroll to zoom, WASD to fly. Press the scooter to ride.</div>
   <input id="search" type="search" placeholder="Search a startup, place, street..." autocomplete="off">
   <ul id="results"></ul>
 </div>
@@ -65,14 +74,17 @@
   <button id="zin" title="closer">+</button>
   <button id="zout" title="further">-</button>
   <button id="pins" class="on" title="startups">&#9733;</button>
+  <button id="ride" title="ride a scooter">&#128757;</button>
     <a id="flat" href="/ai/" title="painted map (2d)">2D</a>
   <button id="share" title="copy link">@</button>
 </div>
 <div id="help" class="panel">Drag: move &middot; right-drag or ctrl-drag: turn and tilt &middot; scroll: zoom &middot; WASD: fly &middot; Q/E: down/up &middot; shift: faster. Painted from Google Photorealistic 3D Tiles (imagery &copy; Google) from four directions, on <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> and ČÚZK lidar geometry. Startups from <a href="https://www.pampam.city/prague-startup-galaxy-fymXihuqWgzHmKnSSsN8">Prague Startup Galaxy</a>.</div>
+<div id="ridehud" class="panel"><b id="speed">0 km/h</b><span class="hint">W/&uarr; gas &middot; S/&darr; brake &middot; A/D steer &middot; shift: faster &middot; space: horn &middot; R: unstuck &middot; M: mute</span><button class="chip" id="rideexit">get off</button><div id="ridemsg"></div></div>
+<div id="pad"><button id="tl">&#9664;</button><button id="tr">&#9654;</button><span></span><button id="thorn">&#128227;</button><button id="tb">brake</button><button id="tg">gas</button></div>
 <div id="card" class="panel"><button class="chip" id="closecard">close</button><h3><img id="clogo" alt=""><span id="cname"></span></h3><div id="cdesc"></div><div class="addr" id="caddr"></div><div id="clinks"></div></div>
 
 <script type="importmap">
-{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/", "three-mesh-bvh": "https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.7.6/build/index.module.js" } }
 </script>
 <script type="module" src="./painted3d.js"></script>
 </body>
