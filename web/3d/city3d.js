@@ -355,8 +355,9 @@ function loop(now) {
     if (frames++ % 15 === 0) stream();
     // build a few chunks per frame within a time budget
     const t0 = performance.now(); while (BUILDQ.length && performance.now() - t0 < 10) { const k = BUILDQ.shift(); const rec = CHUNKS.get(k); if (rec && !rec.group) buildChunk(k); }
-    if ($('loading') && CHUNKS.size > 20 && BUILDQ.length < 5) $('loading').remove();
+    if ($('loading') && [...CHUNKS.values()].filter(r => r && r.group).length >= 12) $('loading').remove();
   }
   renderer.render(scene, camera); updateTags();
 }
 requestAnimationFrame(loop);
+setTimeout(() => { if ($('loading')) $('loading').remove(); }, 12000);
